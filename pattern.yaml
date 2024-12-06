@@ -1,0 +1,125 @@
+# this is what a pattern looks like.
+# a pattern string like "1, 3, 2, 4" will be parsed into this.
+
+# all numbers can also be math expressions (1+2*3/4 etc), also you can put {variable name} anywhere
+# order depends on their literal order there
+
+1:  # operation ID, can be anything unique, just needed since this is a YAML document
+  operation: beat # determines the type of the operation, can also be create variable, set variable, delete variable
+  source: song.mp3 # which audio file to take beat/sample from
+  source mode: beats # how beat positions are determined
+  # `beats` - start, stop and length are measured in beats, for music
+  # `seconds` - start, stop and length and measured in seconds, for samples
+  # `samples` - start, stop and length are measured in samples, for samples
+
+  start: 0 # beginning position of the beat
+  stop: 1 # ending position of the beat
+  length: 1 # alternative to beat end, length of the beat from start
+  increment: 4 # will be added to beat start and beat end each time this operation is done (i am operation)
+
+  mode: append # what to do with the beat
+  # `append` - appends to the end
+  # `prepend` - prepends to the beginning
+  # `insert` - inserts at a position
+  # `add` - performs addition to beat at a position
+  # `multiply` - performs multiplication of beat at a position by this beat, useful for fake sidechaining
+
+  index: -1 # for insert, add, multiply. Position of the beat that new beat will be added to, can be float.
+
+  length mode: shortest # for add/multiply, if new beat overflows over old beats length, whether to extend or cut it
+  # `shortest` - cuts to the length of the shortest beat
+  # `longest` - extends to the length of the longest beat
+  # `existing` - always use the length of the existing beat
+  # 'overflow' - uses length of existing beat, but new beat may overflow onto next beats
+  # `new` - always use the length of the new beat
+  # 'median' - uses median beat length even if new beat is shorter, it will be padded with zeroes
+  # 'median no pad' - uses median beat length but if beat is shorter it won't be padded
+
+  effects:
+    1: # function ID, can be anything unique
+      function: pitch # effect type
+      args: [2] # for parametrized effects, will be passed to the 3rd parameter of the function (1st is audio and 2nd is sample rate)
+      kwargs:
+        quality: 3 # kwarg example (this doesn't actually exist for pitch effect)
+
+2:
+  operation: create variable # creates a variable, then when processing any beat with `{some variable name}` in it, that thing will be replaced by the value of the variable, also make sure to add quotes otherwise YAML won't parse {} as a string
+  name: some variable name # name of the variable and it can be any string as variable names are just keys for a dictionary
+  value: 10 # value of the variable, also keep in mind you can use math expressions and other variables in this like {some variable2} / 14
+
+  function: loudness # alternative to setting a value, if function entry is present, this function will be used to get a variable from some beat, for example average loudness and so on
+  # `random` - random float value in some range, argument must a list of 2 values - start and end of the range, optionally 3rd value - step
+  # `randint` - same as random but random int value in some range, INCLUDING BOTH ENDS
+  # `average` - average of the modulus of the audio
+  # `mean` - mean of the modulus of the audio
+  # `DC offset` - just average, since in normal audio there are values in -1,1 range, normal average/dc offset is 0
+  # `average gradient` - average of the gradient, otherwise known as how many higher frequencies there are, and gradient can be applied multiple times if you pass some int as an argument
+  # `mean gradient` - you get it
+  # `max` - max modulus
+
+  beat: -1 # if function is specified, it will pass this beat to the function to obtain the variable value
+  argument: 4 # for parametrized functions, will be passed to the 3rd parameter of the function (1st is audio and 2nd is sample rate)
+
+3:
+  operation: set variable # applies a function to a variable and don't forget you can use another variable using {} as a parameter
+  name: some variable name # name of the variable you will change
+  value: 9 # second argument that gets passed to the function, also keep in mind you can use math expressions and variables in this like {some variable2} / 14
+
+4:
+  operation: delete variable
+  name: some variable name # if for some reason u need to delete a variable well here you go use this one
+
+5:
+  operation: condition # skips some next operations if condition is not satisfied
+  next: 2 # amount of conditions to skip
+  value: "{var1*var2 = var3}" # can use > < = >= <= and yeah if this is not satisfied next wont be performed
+
+6:
+  operation: shuffle # shuffles operations
+  ids: [1, 3, 5] # ids of operations to shuffle
+  indexes: [2,3,4] # or instead you can put indexes of operations to shuffle
+
+7:
+  operation: move # moves or copies operation and pastes it somewhere else
+  from id: 3
+  from index: 5 # can either select by id or index
+  to index: 4 # index where to put it
+  after id: 6
+  before id: 8
+  replace id: 7 # or instead you can put it before/after/instead of ID
+  delete: true # whether to delete the original, so if this is false it essentially copies and if true it moves, also original is deleted after index is selected
+
+8:
+  operation: delete # deletes an operation under an index
+  id: 4  # id of operation to delete
+  index: 4 # or index
+
+9:
+  operation: create # creates an operation
+  to index: 4 # index where to put it
+  after id: 6
+  before id: 8
+  replace id: 7 # or instead you can put it before/after/instead of ID
+  root:
+    10: # the new operations ID
+      operation: beat
+      # .... and stuff stuff stuff you get it
+
+10:
+  operation: do # does another operation under some ID or index
+  id: 7
+  index: 10 # yeah as usual either specify ID or index
+  times: 3 # how many times to perform it
+
+11:
+  operation: goto # goto it goes to an operation under some index
+  id: 8
+  index: 3
+
+
+# FIELDS THAT CAN BE ON ALL OPERATIONS:
+# `shuffle group: 4` - can be int or list of ints, every time the first operation is executed which usually happens when it is looped, all operations in each shuffle group will be shuffled
+# `shuffle always group: 3` - same except it shuffles every operation
+# `shuffle trigger group: 2` - shuffles when operation has `trigger shuffle: 2`
+# `condition: {stuff} * 3 = 2` - operation skips if condition is false
+# `next: 2`
