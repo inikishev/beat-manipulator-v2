@@ -9,3 +9,8 @@ whats new
  - bunch of new stuff like effects and operations that i couldnt add into v1 because it was annoying to extend it (it was my very first programming project)
  - there will be less clicking between beats
  - i have some unhinged ideas that i will add
+
+## Q/A
+ **Q: hey idiot why aren't you updating this???**
+ 
+ A: shut up shut up shut up im working on it
